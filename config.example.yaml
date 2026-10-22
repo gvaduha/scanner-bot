@@ -1,0 +1,63 @@
+# Scanner bot configuration.
+# Copy to config.yaml and edit. ${VAR} is replaced with the environment
+# variable VAR; ${VAR:-default} uses "default" when VAR is not set.
+
+telegram:
+  token: ${TELEGRAM_BOT_TOKEN}
+  poll_timeout: 30            # long-polling timeout, seconds
+
+# Default decision mode for all groups: "vocabulary" or "claude".
+# Each group can override it with its own "mode".
+mode: vocabulary
+
+claude:
+  api_key: ${ANTHROPIC_API_KEY:-}
+  model: claude-haiku-5-5     # any Messages API model id
+  max_tokens: 300
+  timeout: 30
+  # What to do if the Claude call fails:
+  #   vocabulary - use the group's vocabulary instead (default)
+  #   skip       - don't reply
+  #   reply      - reply anyway
+  on_error: vocabulary
+  # system_prompt: |          # optional, replaces the built-in prompt
+  #   ...
+
+# Telegram user ids allowed to send /reload (re-reads this file without restart).
+admin_user_ids: []
+
+chatid_command: true          # "/chatid" in any chat replies with its id
+ignore_bots: true             # don't react to messages from other bots
+dry_run: false                # log what would be sent, never send
+
+groups:
+  - chat: -1001234567890      # numeric chat id (use /chatid) or "@public_group"
+    title: Example group      # only used in logs
+    alert_threshold: 5        # reply when the score is GREATER than this
+    count_repeats: true       # every occurrence of a word adds its weight
+    cooldown_seconds: 60      # at most one reply per minute in this group
+    vocabulary:
+      # word: weight
+      scam: 3
+      crypto*: 2              # prefix: crypto, cryptocurrency, ...
+      "free money": 4         # phrase: words next to each other
+      скидк*: 2               # works for any language
+      giveaway: 2
+    answers:                  # one is picked at random on each alert
+      - "Careful, this looks like a scam."
+      - "Please don't send money to strangers."
+      - "Mods have been notified."
+
+  - chat: "@another_public_group"
+    title: Claude-moderated group
+    mode: claude              # this group asks Claude instead of counting words
+    claude_instructions: |
+      Reply when the message advertises paid services, crypto schemes,
+      or asks members to message someone privately for "opportunities".
+      Ordinary discussion, questions and jokes are not a reason to reply.
+    vocabulary:               # optional here: used as fallback if Claude fails
+      crypto*: 3
+      invest*: 2
+    alert_threshold: 4
+    answers:
+      - "Advertising is not allowed here."
